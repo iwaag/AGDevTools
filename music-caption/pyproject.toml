@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "blap"
+name = "music-caption"
 version = "0.1.10"
 description = "For Music Caption"
 authors = ["iwaag"]
