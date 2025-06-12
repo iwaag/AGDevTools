@@ -101,13 +101,13 @@ async def music_caption(
     prompt: str = Form(...),
     audios: List[UploadFile] = File([]),
 ):
-    return await inner_general_post(prompt, [], audios, MUSIC_CAPTION_URL)
+    return await inner_general_post(prompt, [], audios, MUSIC_CAPTION_URL + "/music-caption")
 @app.post("/music-highlight")
 async def music_highlight(
     prompt: str = Form(...),
     audios: List[UploadFile] = File([]),
 ):
-    return await inner_general_post(prompt, [], audios, MUSIC_HIGHLIGHT_URL)
+    return await inner_general_post(prompt, [], audios, MUSIC_HIGHLIGHT_URL + "/music-highlight")
 @app.post("/vqa")
 async def vqa(
     question: str = Form(...),  # Text field
@@ -198,10 +198,14 @@ async def inner_general_post(
         print(f"Sending files")
         # Step 3: Send to target
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, data=data, files=files)
+            response = await client.post(url, data=data, files=files, timeout=120.0)
         print(f"Response from {url}: {response.status_code} - {response.text}")
         # Step 4: Return response from target
-        return response
+        return Response(
+            content=response.content,
+            status_code=response.status_code,
+            media_type=response.headers.get("content-type", "application/octet-stream")
+        )
     # Step 5: Handle locally if not relayed
     return JSONResponse(
         content={"error": "Inputs do not meet relay criteria."},
