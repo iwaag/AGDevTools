@@ -33,8 +33,8 @@ pip-download-cache/
 *~
 #standard git ignore for next.js projects
 # dependencies
-/node_modules
-/.pnp
+node_modules
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -43,14 +43,14 @@ pip-download-cache/
 !.yarn/versions
 
 # testing
-/coverage
+coverage
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build
 
 # misc
 .DS_Store
