@@ -1,5 +1,6 @@
 from typing import List
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form, Response, StreamingReponse
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form, Response
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 import lmstudio as lms
@@ -202,7 +203,7 @@ async def inner_general_post(
             response = await client.post(url, data=data, files=files, timeout=120.0)
         print(f"Response from {url}: {response.status_code} - {response.text}")
         # Step 4: Return response from target
-        return StreamingReponse(
+        return StreamingResponse(
             content=response.content,
             status_code=response.status_code,
             media_type=response.headers.get("content-type", "application/octet-stream")
