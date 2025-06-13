@@ -8,17 +8,17 @@ module.exports = {
         `
         source /opt/anaconda3/etc/profile.d/conda.sh &&
         cd ./music-caption &&
-        if [ ! -f "./env/conda-meta/history" ]; then
+        if [ ! -d "./env" ]; then
           conda create --yes --prefix ./env python=3.11
         fi &&
         conda activate ./env &&
         pip install poetry &&
         poetry config virtualenvs.create false &&
         poetry install --no-root &&
-        pip install -r requirements.txt &&
         uvicorn main:app --host 0.0.0.0 --port 8102
         `
-      ]
+      ],
+      autorestart: false
     }
     // {
     //   name :'music-analysis',

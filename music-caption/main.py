@@ -26,7 +26,7 @@ async def music_caption(
     prompt: str = Form(...),         # Text field
     audios: List[UploadFile] = File(...)         # music file
 ):
-        
+    print("step1")
     class Stopwatch:
         def __enter__(self):
             self.start = time.perf_counter()

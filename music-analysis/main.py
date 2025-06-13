@@ -8,9 +8,9 @@ import io
 app = FastAPI()
 
 @app.post("/music-highlight")
-async def extract_highlight(file: UploadFile = File(...)):
+async def extract_highlight(audios: UploadFile = File(...)):
     # Read uploaded file into memory
-    contents = await file.read()
+    contents = await audios.read()
     audio_buf = io.BytesIO(contents)
 
     # Load audio from memory

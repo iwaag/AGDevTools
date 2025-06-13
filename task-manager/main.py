@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form, Response, StreamingReponse
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 import lmstudio as lms
@@ -70,11 +70,6 @@ async def story_add_emotion(request: Request):
     async with httpx.AsyncClient() as client:
         response = await client.post(EXTERNAL_BACKEND_URL, json=data.model_dump())
         return response.json()
-client = openai.OpenAI(
-    base_url=OPENAI_MIDDLE_URL,  # Adjust if using a different endpoint
-    api_key="your-openai-api-key",  # Replace with your actual API key
-    # Or use environment variable: api_key=os.getenv("OPENAI_API_KEY")
-)
 
 @app.post("/multimodal-input")
 async def multimodal_input(
@@ -104,22 +99,28 @@ async def music_caption(
     return await inner_general_post(prompt, [], audios, MUSIC_CAPTION_URL + "/music-caption")
 @app.post("/music-highlight")
 async def music_highlight(
-    prompt: str = Form(...),
     audios: List[UploadFile] = File([]),
 ):
-    return await inner_general_post(prompt, [], audios, MUSIC_HIGHLIGHT_URL + "/music-highlight")
+    return await inner_general_post("", [], audios, MUSIC_HIGHLIGHT_URL + "/music-highlight")
 @app.post("/vqa")
 async def vqa(
-    question: str = Form(...),  # Text field
-    file: UploadFile = File(...)  # Image file
+    prompt: str = Form(...),  # Text field
+    images: List[UploadFile] = File(...)  # Image file
 ):
-    return inner_openai(question, file, OPENAI_MIDDLE_URL, VLM_MODEL)
+    print(f"Received VQA request with prompt: {prompt} and images: {len(images)}")
+    return await inner_openai(prompt, images, [], OPENAI_MIDDLE_URL, VLM_MODEL)
 async def inner_openai(
     prompt: str,
     images: List[UploadFile],
     audios: List[UploadFile],
-    model: str = VLM_MODEL  # Default to the VLM model
+    url: str,  # Default to the OpenAI middle URL
+    model: str  # Default to the VLM model,
 ):
+    openai_client = openai.OpenAI(
+        base_url=url,  # Adjust if using a different endpoint
+        api_key="your-openai-api-key",  # Replace with your actual API key
+        # Or use environment variable: api_key=os.getenv("OPENAI_API_KEY")
+    )
     # Read and encode the images
     base64_images = []
     print(f"Processing images: {len(images)}")
@@ -149,7 +150,7 @@ async def inner_openai(
     try:
         print(f"Creating chat completion with model: {model}")
         # Create the chat completion with vision
-        response = client.chat.completions.create(
+        response = openai_client.chat.completions.create(
             model=model,  # Use gpt-4o or gpt-4-vision-preview for vision capabilities
             messages = [
                 {"role": "user", "content": [
@@ -201,7 +202,7 @@ async def inner_general_post(
             response = await client.post(url, data=data, files=files, timeout=120.0)
         print(f"Response from {url}: {response.status_code} - {response.text}")
         # Step 4: Return response from target
-        return Response(
+        return StreamingReponse(
             content=response.content,
             status_code=response.status_code,
             media_type=response.headers.get("content-type", "application/octet-stream")
