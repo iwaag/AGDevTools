@@ -3,6 +3,8 @@ from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form, Res
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
+from starlette.background import BackgroundTask
+from starlette.types import Send
 import lmstudio as lms
 import httpx
 import os
@@ -200,14 +202,27 @@ async def inner_general_post(
         print(f"Sending files")
         # Step 3: Send to target
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, data=data, files=files, timeout=120.0)
-        print(f"Response from {url}: {response.status_code} - {response.text}")
-        # Step 4: Return response from target
-        return StreamingResponse(
-            content=response.content,
-            status_code=response.status_code,
-            media_type=response.headers.get("content-type", "application/octet-stream")
+            proxy_response = await client.post(url, data=data, files=files, timeout=120.0)
+        response_headers = [
+            (name, value)
+            for name, value in proxy_response.headers.items()
+            if name.lower() not in ["content-encoding", "transfer-encoding", "connection", "content-length"]
+        ]
+
+        async def general_response_iterator():
+            # This unified iterator streams bytes regardless of content type
+            async for chunk in proxy_response.aiter_bytes():
+                yield chunk
+
+        # Create a single StreamingResponse for all types of responses
+        response = StreamingResponse(
+            general_response_iterator(),
+            status_code=proxy_response.status_code,
+            media_type=proxy_response.headers.get("content-type"),
+            headers=dict(response_headers), # Convert list of tuples to dictionary for headers
+            background=BackgroundTask(proxy_response.aclose) # Ensure the upstream connection is closed
         )
+        return response
     # Step 5: Handle locally if not relayed
     return JSONResponse(
         content={"error": "Inputs do not meet relay criteria."},
